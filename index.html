@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Alarm Clock</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .alarm {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .alarm-inputs {
+      display: flex;
+      align-items: center;
+    }
+
+    .alarm-inputs input[type="time"],
+    .alarm-inputs select {
+      flex: 1;
+      margin-right: 10px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .alarm-text {
+      font-size: 16px;
+      margin-right: 10px;
+    }
+
+    .alarm-actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .alarm-actions button {
+      background-color: #4CAF50;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 8px 12px;
+    }
+
+    .alarm-actions button:hover {
+      background-color: #45a049;
+    }
+
+    .reset-button {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .reset-button button {
+      background-color: #f44336;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 8px 12px;
+      transition: background-color 0.3s;
+    }
+
+    .reset-button button:hover {
+      background-color: #d32f2f;
+    }
+
+    .alarm-controls {
+      display: none;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .alarm-controls button {
+      margin: 0 10px;
+      background-color: #4CAF50;
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 8px 12px;
+    }
+
+    .alarm-controls button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Alarm Clock</h1>
+
+    <div id="alarms">
+      <div class="alarm">
+        <div class="alarm-inputs">
+          <input type="time" required>
+          <select required>
+            <option value="monday">Monday</option>
+            <option value="tuesday">Tuesday</option>
+            <option value="wednesday">Wednesday</option>
+            <option value="thursday">Thursday</option>
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+            <option value="sunday">Sunday</option>
+          </select>
+        </div>
+        <div class="alarm-actions">
+          <button onclick="setAlarm(this)">Set Alarm</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="reset-button" id="resetButton">
+      <button onclick="resetAlarms()">Reset Alarms</button>
+    </div>
+
+    <div class="alarm-controls" id="alarmControls">
+      <button onclick="snoozeAlarm()">Snooze</button>
+      <button onclick="stopAlarm()">Stop</button>
+    </div>
+
+    <audio id="ringtone" src="https://www.w3schools.com/html/horse.ogg"></audio>
+    <audio id="snore" src="https://www.w3schools.com/html/horse.ogg"></audio>
+  </div>
+
+  <script>
+    var alarmTimeout;
+    var snoozeTimeout;
+    var alarmAudio = document.getElementById('ringtone');
+    var snoreAudio = document.getElementById('snore');
+    var alarmControls = document.getElementById('alarmControls');
+
+    function setAlarm(button) {
+      var alarmContainer = button.parentNode.parentNode;
+      var alarmInputs = alarmContainer.querySelector('.alarm-inputs');
+      var timeInput = alarmInputs.querySelector('input[type="time"]');
+      var daySelect = alarmInputs.querySelector('select');
+
+      var alarmTime = timeInput.value;
+      var alarmDay = daySelect.value;
+
+      var now = new Date();
+      var alarmDate = getNextDayOfWeek(now, alarmDay);
+
+      var alarmDateTime = new Date(alarmDate.toDateString() + ' ' + alarmTime);
+      var currentTime = new Date();
+
+      var timeDiff = alarmDateTime - currentTime;
+
+      if (timeDiff < 0) {
+        // Alarm time has already passed, add one week to the alarm date
+        alarmDateTime.setDate(alarmDateTime.getDate() + 7);
+        timeDiff = alarmDateTime - currentTime;
+      }
+
+      var alarmText = document.createElement('span');
+      alarmText.className = 'alarm-text';
+      alarmText.textContent = 'Alarm set for ' + alarmTime + ' on ' + alarmDay;
+
+      var resetButton = document.createElement('button');
+      resetButton.textContent = 'Reset';
+      resetButton.onclick = function() {
+        resetAlarm(alarmContainer);
+      };
+
+      var alarmActions = alarmContainer.querySelector('.alarm-actions');
+      alarmActions.innerHTML = '';
+      alarmActions.appendChild(alarmText);
+      alarmActions.appendChild(resetButton);
+
+      alarmInputs.style.display = 'none';
+
+      // Calculate the time difference in seconds
+      var timeDiffInSeconds = Math.floor(timeDiff / 1000);
+
+      // Play the ringtone after the specified time difference
+      alarmTimeout = setTimeout(function() {
+        playAlarm();
+      }, timeDiffInSeconds * 1000);
+    }
+
+    function resetAlarm(alarmContainer) {
+      var alarmInputs = alarmContainer.querySelector('.alarm-inputs');
+      alarmInputs.style.display = 'flex';
+
+      var alarmActions = alarmContainer.querySelector('.alarm-actions');
+      alarmActions.innerHTML = '';
+
+      var setButton = document.createElement('button');
+      setButton.textContent = 'Set Alarm';
+      setButton.onclick = function() {
+        setAlarm(this);
+      };
+
+      alarmActions.appendChild(setButton);
+
+      // Stop the currently playing alarm and clear the timeout
+      stopAlarm();
+      clearTimeout(alarmTimeout);
+    }
+
+    function resetAlarms() {
+      var alarmsContainer = document.getElementById('alarms');
+      alarmsContainer.innerHTML = '';
+
+      var resetButton = document.getElementById('resetButton');
+      resetButton.style.display = 'none';
+
+      var addAlarmButton = document.createElement('button');
+      addAlarmButton.textContent = 'Add Alarm';
+      addAlarmButton.onclick = function() {
+        addAlarm();
+      };
+
+      alarmsContainer.appendChild(addAlarmButton);
+
+      // Stop the currently playing alarm and clear the timeout
+      stopAlarm();
+      clearTimeout(alarmTimeout);
+    }
+
+    function addAlarm() {
+      var alarmsContainer = document.getElementById('alarms');
+
+      var alarmDiv = document.createElement('div');
+      alarmDiv.className = 'alarm';
+
+      var alarmInputsDiv = document.createElement('div');
+      alarmInputsDiv.className = 'alarm-inputs';
+
+      var timeInput = document.createElement('input');
+      timeInput.type = 'time';
+      timeInput.required = true;
+
+      var daySelect = document.createElement('select');
+      daySelect.required = true;
+      var daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      for (var i = 0; i < daysOfWeek.length; i++) {
+        var option = document.createElement('option');
+        option.value = daysOfWeek[i].toLowerCase();
+        option.text = daysOfWeek[i];
+        daySelect.appendChild(option);
+      }
+
+      alarmInputsDiv.appendChild(timeInput);
+      alarmInputsDiv.appendChild(daySelect);
+
+      var alarmActionsDiv = document.createElement('div');
+      alarmActionsDiv.className = 'alarm-actions';
+
+      var setButton = document.createElement('button');
+      setButton.textContent = 'Set Alarm';
+      setButton.onclick = function() {
+        setAlarm(this);
+      };
+
+      alarmActionsDiv.appendChild(setButton);
+
+      alarmDiv.appendChild(alarmInputsDiv);
+      alarmDiv.appendChild(alarmActionsDiv);
+
+      alarmsContainer.appendChild(alarmDiv);
+
+      var resetButton = document.getElementById('resetButton');
+      resetButton.style.display = 'block';
+    }
+
+    function getNextDayOfWeek(date, dayOfWeek) {
+      var days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      var dayIndex = days.indexOf(dayOfWeek.toLowerCase());
+
+      var resultDate = new Date(date.getTime());
+      resultDate.setDate(date.getDate() + (7 + dayIndex - date.getDay()) % 7);
+
+      return resultDate;
+    }
+
+    function playAlarm() {
+      alarmAudio.loop = true;
+      alarmAudio.play();
+      snoreAudio.loop = true;
+      snoreAudio.play();
+      alarmControls.style.display = 'flex';
+    }
+
+    function stopAlarm() {
+      alarmAudio.pause();
+      alarmAudio.currentTime = 0;
+      snoreAudio.pause();
+      snoreAudio.currentTime = 0;
+      alarmControls.style.display = 'none';
+    }
+
+    function snoozeAlarm() {
+      stopAlarm();
+      clearTimeout(alarmTimeout);
+      snoozeTimeout = setTimeout(playAlarm, 300000); // Snooze for 5 minutes (300,000 milliseconds)
+    }
+  </script>
+</body>
+</html>
